@@ -1,21 +1,26 @@
 import asyncio
-from aiogram import Bot, Dispatcher, types, F
+import gspread
+from aiogram import Bot, Dispatcher, types
 from aiogram.filters import Command
-
-# ВАЖНО: Мы будем хранить настройки в переменных окружения (на хостинге)
 import os
 
-TOKEN = os.getenv("BOT_TOKEN")
+# Ваш токен от BotFather
+TOKEN = os.getenv("BOT_TOKEN") 
+# Ссылка на вашу таблицу (вставьте свою)
+SHEET_URL = "ВАША_ССЫЛКА_НА_ТАБЛИЦУ"
 
 bot = Bot(token=TOKEN)
 dp = Dispatcher()
 
+# Подключение к таблице
+gc = gspread.service_account_from_dict(os.environ.get("GOOGLE_CREDENTIALS")) # Это мы настроим на хостинге
+sheet = gc.open_by_url(SHEET_URL).worksheet("Meds")
+
 @dp.message(Command("start"))
 async def start_handler(message: types.Message):
-    await message.answer("Привет! Я ваш медицинский помощник. Бот запущен!")
+    await message.answer("Привет! Бот готов к работе с таблицей.")
 
 async def main():
-    print("Бот запущен...")
     await dp.start_polling(bot)
 
 if __name__ == "__main__":
