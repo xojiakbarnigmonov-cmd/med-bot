@@ -12,7 +12,7 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 TOKEN = os.getenv("BOT_TOKEN")
 # Используем ваш рабочий ключ напрямую в коде
-GEMINI_API_KEY = "AIzaSyB0zIZUYnpZlIplpx0chWIU46pSNWsfAms"
+GEMINI_API_KEY = "AIzaSyAmJbatsy9neJUyFzVc0Kb6qLgv0D1nwvs"
 
 # ==========================================
 # ВАШИ НАСТРОЙКИ (ID проверены и вписаны)
