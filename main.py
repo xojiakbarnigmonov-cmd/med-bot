@@ -29,6 +29,16 @@ async def main():
     
     # Запускаем бота
     await dp.start_polling(bot)
+import aiohttp # добавьте в начало файла к остальным импортам
 
+WEBHOOK_URL = "https://script.google.com/macros/s/AKfycbwB8P6GdaT8o43xzh-eCE5EEgRiYkTOwxLtbfeVkP8JO8HnBHxAZZH1UwWO80OyB8y5/exec"
+
+@dp.message() # Бот будет ловить любое сообщение и отправлять в таблицу
+async def save_to_sheet(message: types.Message):
+    async with aiohttp.ClientSession() as session:
+        data = {"user": message.from_user.full_name, "message": message.text}
+        async with session.post(WEBHOOK_URL, json=data) as response:
+            await message.answer("Данные отправлены в таблицу!")
+            
 if __name__ == "__main__":
     asyncio.run(main())
