@@ -207,6 +207,9 @@ async def food_callback_handler(callback: types.CallbackQuery):
 # ==========================================
 # ИНТЕГРАЦИЯ С GEMINI AI (ОСТАЕТСЯ БЕЗ ИЗМЕНЕНИЙ)
 # ==========================================
+
+GEMINI_API_KEY = "AIzaSyB0zIZUYnpZlIplpx0chWIU46pSNWsfAms"
+
 async def ask_gemini_recipe(ingredients: str) -> str:
     if not GEMINI_API_KEY: return "⚠️ Ошибка API ключа."
     url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={GEMINI_API_KEY}"
