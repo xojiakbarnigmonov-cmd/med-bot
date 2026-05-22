@@ -11,10 +11,11 @@ from aiogram.fsm.state import State, StatesGroup
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 TOKEN = os.getenv("BOT_TOKEN")
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+# Используем ваш рабочий ключ напрямую в коде
+GEMINI_API_KEY = "AIzaSyB0zIZUYnpZlIplpx0chWIU46pSNWsfAms"
 
 # ==========================================
-# ВАШИ НАСТРОЙКИ (Впишите свои ID)
+# ВАШИ НАСТРОЙКИ (ID проверены и вписаны)
 # ==========================================
 ADMIN_ID = 269215305  # Ваш ID
 MOM_ID = 5599753365    # ID мамы
@@ -51,7 +52,7 @@ class ChatStates(StatesGroup):
     waiting_for_mom_question = State()
     waiting_for_son_reply = State()
     waiting_for_ingredients = State()
-    # Новые состояния для админки
+    # Состояния для админки
     waiting_for_pill_name = State()
     waiting_for_pill_time = State()
 
@@ -108,7 +109,6 @@ async def add_pill_name(message: types.Message, state: FSMContext):
 @dp.message(ChatStates.waiting_for_pill_time)
 async def add_pill_save(message: types.Message, state: FSMContext):
     time_text = message.text.strip()
-    # Простая проверка формата времени
     if len(time_text) != 5 or ":" not in time_text:
         await message.answer("⚠️ Неверный формат. Введите время как ЧЧ:ММ (например, 18:15):")
         return
@@ -116,7 +116,6 @@ async def add_pill_save(message: types.Message, state: FSMContext):
     user_data = await state.get_data()
     pill_name = user_data['pill_name']
     
-    # Сохраняем в базу данных
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
     cursor.execute("INSERT INTO pills (name, time) VALUES (?, ?)", (pill_name, time_text))
@@ -151,7 +150,6 @@ async def delete_pill(message: types.Message):
 
 # Динамическая отправка лекарств из базы данных
 async def check_and_send_pills():
-    # Эта функция срабатывает каждую минуту и проверяет базу данных
     from datetime import datetime
     now = datetime.now().strftime("%H:%M")
     
@@ -205,29 +203,34 @@ async def food_callback_handler(callback: types.CallbackQuery):
     await callback.answer()
 
 # ==========================================
-# ИНТЕГРАЦИЯ С GEMINI AI (ОСТАЕТСЯ БЕЗ ИЗМЕНЕНИЙ)
+# ИНТЕГРАЦИЯ С GEMINI AI (ОБНОВЛЕННАЯ С КЛЮЧОМ)
 # ==========================================
-
-GEMINI_API_KEY = "AIzaSyB0zIZUYnpZlIplpx0chWIU46pSNWsfAms"
-
 async def ask_gemini_recipe(ingredients: str) -> str:
-    if not GEMINI_API_KEY: return "⚠️ Ошибка API ключа."
+    if not GEMINI_API_KEY: 
+        return "⚠️ Ошибка: API-ключ не задан в коде."
+        
     url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={GEMINI_API_KEY}"
+    
     system_instruction = (
         "Ты — профессиональный диетолог и шеф-повар. Твоя задача — составить рецепт для мамы пользователя. "
         "У неё строгая диета (мягкая, нежирная пища, без обжарки, минимум соли, без острого и без сахара — аналог стола №5). "
         "Готовить можно ИСКЛЮЧИТЕЛЬНО в мультиварке Xiaomi Mijia, используя только два режима: 'Soup' и 'Steam'. "
         "Из предложенных ингредиентов выбери подходящие и составь ОДИН пошаговый рецепт. Отвечай на русском языке."
     )
+    
     payload = {"contents": [{"parts": [{"text": f"{system_instruction}\n\nПродукты: {ingredients}"}]}]}
+    
     try:
         async with aiohttp.ClientSession() as session:
             async with session.post(url, json=payload) as response:
                 if response.status == 200:
                     result = await response.json()
                     return result['candidates'][0]['content']['parts'][0]['text']
-                return "Ошибка связи с AI."
-    except: return "Не удалось связаться с AI."
+                else:
+                    error_data = await response.text()
+                    return f"❌ Ошибка сервера Google (Код: {response.status}). Ответ: {error_data[:100]}"
+    except Exception as e: 
+        return f"❌ Не удалось связаться с AI из-за сетевой ошибки: {str(e)}"
 
 @dp.message(F.text == "🥘 Что приготовить из холодильника?")
 async def ingredients_request(message: types.Message, state: FSMContext):
@@ -237,10 +240,20 @@ async def ingredients_request(message: types.Message, state: FSMContext):
 
 @dp.message(ChatStates.waiting_for_ingredients)
 async def generate_and_send_recipe(message: types.Message, state: FSMContext):
+    # Отправляем сообщение "Минутку..."
     waiting_msg = await message.answer("⏳ Минутку, подбираю полезный рецепт для мультиварки...")
+    
+    # Запрашиваем рецепт у ИИ
     recipe = await ask_gemini_recipe(message.text)
+    
+    # СНАЧАЛА удаляем "Минутку...", чтобы чат выглядел красиво
+    try:
+        await bot.delete_message(chat_id=message.chat.id, message_id=waiting_msg.message_id)
+    except:
+        pass
+        
+    # ТЕПЕРЬ выводим сам рецепт
     await message.answer(recipe, parse_mode="Markdown")
-    await bot.delete_message(chat_id=message.chat.id, message_id=waiting_msg.message_id)
     await state.clear()
 
 # ==========================================
