@@ -3,3 +3,4 @@ gspread
 oauth2client
 google-auth
 aiohttp
+apscheduler==3.10.4
